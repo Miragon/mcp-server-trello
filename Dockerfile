@@ -37,6 +37,10 @@ RUN bun install --production --frozen
 # The environment variables should be passed at runtime, not baked into the image
 # They can be provided via docker run -e or docker compose environment section
 ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=3000
 
-# Run the MCP server using Bun
+EXPOSE 3000
+
+# Run the MCP server (HTTP transport via mcp-use, listens on $HOST:$PORT)
 CMD ["bun", "build/index.js"]

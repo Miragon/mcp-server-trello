@@ -69,3 +69,4 @@ mcp-publisher
 .mcpregistry_registry_token
 .claude-flow/data/
 .claude-flow/metrics/**/*
+.mcp-use/

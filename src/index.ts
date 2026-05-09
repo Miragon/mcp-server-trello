@@ -1,12 +1,28 @@
 #!/usr/bin/env node
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
+import { MCPServer } from 'mcp-use/server';
+import { z, ZodRawShape } from 'zod';
 import { TrelloClient } from './trello-client.js';
 import { TrelloHealthEndpoints, HealthEndpointSchemas } from './health/health-endpoints.js';
 
+interface RegisterToolConfig {
+  title?: string;
+  description?: string;
+  inputSchema?: ZodRawShape;
+  annotations?: unknown;
+  _meta?: Record<string, unknown>;
+}
+
+interface ServerShim {
+  registerTool: (
+    name: string,
+    config: RegisterToolConfig,
+    handler: (args: any, extra?: any) => any
+  ) => void;
+}
+
 class TrelloServer {
-  private server: McpServer;
+  private mcpServer: MCPServer;
+  private server: ServerShim;
   private trelloClient: TrelloClient;
   private healthEndpoints: TrelloHealthEndpoints;
 
@@ -28,17 +44,34 @@ class TrelloServer {
 
     this.healthEndpoints = new TrelloHealthEndpoints(this.trelloClient);
 
-    this.server = new McpServer({
+    this.mcpServer = new MCPServer({
       name: 'trello-server',
       version: '1.7.1',
     });
 
+    this.server = {
+      registerTool: (name, config, handler) => {
+        this.mcpServer.tool(
+          {
+            name,
+            title: config.title,
+            description: config.description ?? '',
+            schema: config.inputSchema ? z.object(config.inputSchema) : undefined,
+            annotations: config.annotations as any,
+            _meta: config._meta,
+          },
+          handler
+        );
+      },
+    };
+
     this.setupTools();
     this.setupHealthEndpoints();
 
-    // Error handling
     process.on('SIGINT', async () => {
-      await this.server.close();
+      process.exit(0);
+    });
+    process.on('SIGTERM', async () => {
       process.exit(0);
     });
   }
@@ -1556,16 +1589,15 @@ class TrelloServer {
   }
 
   async run() {
-    const transport = new StdioServerTransport();
-    // Load configuration before starting the server
     await this.trelloClient.loadConfig().catch(() => {
       // Continue with default config if loading fails
     });
-    await this.server.connect(transport);
+    await this.mcpServer.listen();
   }
 }
 
 const server = new TrelloServer();
-server.run().catch(() => {
-  // Silently handle errors to avoid interfering with MCP protocol
+server.run().catch(err => {
+  console.error('Failed to start Trello MCP server:', err);
+  process.exit(1);
 });

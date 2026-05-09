@@ -29,6 +29,7 @@
     "https-proxy-agent": "^7.0.6",
     "form-data": "^4.0.5",
     "mcp-evals": "^1.0.18",
+    "mcp-use": "^1.27.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -58,7 +59,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir ./build --target node --format esm",
+    "build": "bun build src/index.ts --outdir ./build --target node --format esm --packages external",
     "build:types": "tsc --emitDeclarationOnly || echo 'Warning: Type declarations generation failed, but build succeeded'",
     "build:prod": "npm run build",
     "dev": "bun --watch src/index.ts",
